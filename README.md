@@ -38,8 +38,7 @@ Your Excel must contain:
 
 ### 2️⃣ Choose Format  
 - JPG  
-- PNG  
-- SVG  
+- PNG
 
 ### 3️⃣ Download ZIP  
 
