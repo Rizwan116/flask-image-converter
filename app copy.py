@@ -6,16 +6,8 @@ from io import BytesIO
 import os
 import zipfile
 import uuid
-from cryptography.fernet import Fernet
 
 app = Flask(__name__)
-
-# -----------------------------
-#  AES-256 URL Encryption Setup
-# -----------------------------
-# Generate a key once with:   >>> from cryptography.fernet import Fernet; Fernet.generate_key()
-SECRET_KEY = b"pYJbebx0Zx7Tbnr8T0XcqEV2v7Qp2fwP67Hcqg9xlq0="   # CHANGE THIS!!
-cipher = Fernet(SECRET_KEY)
 
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "converted"
@@ -24,25 +16,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 
-# -----------------------------
-# Encryption Helper Functions
-# -----------------------------
-def encrypt_url(url: str) -> str:
-    return cipher.encrypt(url.encode()).decode()
-
-
-def decrypt_url(enc_url: str) -> str:
-    return cipher.decrypt(enc_url.encode()).decode()
-
-
-# -----------------------------
-# Image Conversion Functions
-# -----------------------------
-def convert_to_jpg(name, url, save_folder):
+def convert_webp_to_jpg(name, url, save_folder):
     try:
-        final_url = decrypt_url(url)
-
-        response = requests.get(final_url, timeout=10)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
 
         img = Image.open(BytesIO(response.content)).convert("RGB")
@@ -51,15 +27,13 @@ def convert_to_jpg(name, url, save_folder):
         return output_path
 
     except Exception as e:
-        print(f"Failed JPG: {name} - {e}")
+        print(f"Failed: {name} - {e}")
         return None
 
 
-def convert_to_png(name, url, save_folder):
+def convert_webp_to_png(name, url, save_folder):
     try:
-        final_url = decrypt_url(url)
-
-        response = requests.get(final_url, timeout=10)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
 
         img = Image.open(BytesIO(response.content))
@@ -68,13 +42,10 @@ def convert_to_png(name, url, save_folder):
         return output_path
 
     except Exception as e:
-        print(f"Failed PNG: {name} - {e}")
+        print(f"Failed: {name} - {e}")
         return None
 
 
-# -----------------------------
-# Main Route
-# -----------------------------
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -96,21 +67,16 @@ def index():
         if "name" not in df.columns or "link" not in df.columns:
             return "Excel must contain 'name' and 'link' columns."
 
-        # Encrypt all URLs first
-        df["encrypted"] = df["link"].apply(lambda x: encrypt_url(str(x).strip()))
-
-        # Convert each item
         for _, row in df.iterrows():
             name = str(row["name"]).strip()
-            encrypted_url = row["encrypted"]
+            url = str(row["link"]).strip()
 
             if format_choice == "jpg":
-                convert_to_jpg(name, encrypted_url, unique_folder)
+                convert_webp_to_jpg(name, url, unique_folder)
 
             elif format_choice == "png":
-                convert_to_png(name, encrypted_url, unique_folder)
+                convert_webp_to_png(name, url, unique_folder)
 
-        # Create ZIP
         zip_filename = unique_folder + ".zip"
         with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
             for file in os.listdir(unique_folder):
